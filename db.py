@@ -2,8 +2,8 @@ import sqlite3
 
 default_admins = [
     (1, '909756003', 1),
-    (2, '1549748318', 1)
-    (3, '1662672529', 1)
+    (2, '1549748318', 1),
+    (3, '1662672529', 1),
 ]
 token = '7439047758:AAE8a_65KIYWRFaY1036cq8xfe_QT-FleHo'
 bot_name = '@premium ddos'
